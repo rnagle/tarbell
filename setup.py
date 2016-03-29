@@ -34,7 +34,7 @@ Tarbell makes use of familiar, flexible tools to take the magic (and frustration
     include_package_data=True,
     install_requires=[
         "Flask==0.10.1",
-        "Frozen-Flask==0.11",
+        "Frozen-Flask==0.12",
         "Jinja2==2.7.3",
         "Markdown==2.4.1",
         "MarkupSafe==0.23",
