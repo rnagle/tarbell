@@ -239,8 +239,6 @@ def tarbell_install_blueprint(command, args):
             puts("\n- Cloning repo")
             git = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False, _err_to_out=True)
             puts(git.clone(template_url, '.'))
-            puts(git.fetch())
-            puts(git.checkout(MAJOR_VERSION))
 
             _install_requirements(tempdir)
 
@@ -481,14 +479,18 @@ def tarbell_update(command, args):
         puts("Updating to latest blueprint\n")
 
         git = sh.git.bake(_cwd=site.base.base_dir)
-        git.fetch()
-        puts(colored.yellow("Checking out {0}".format(MAJOR_VERSION)))
-        puts(git.checkout(MAJOR_VERSION))
+
+        # stash then pull
         puts(colored.yellow("Stashing local changes"))
         puts(git.stash())
-        puts(colored.yellow("Pull latest changes"))
-        puts(git.pull('origin', MAJOR_VERSION))
 
+        puts(colored.yellow("Pull latest changes"))
+        puts(git.pull())
+        
+        # need to pop any local changes back to get back on the original branch
+        # this may behave oddly if you have old changes stashed
+        if git.stash.list():
+            puts(git.stash.pop())
 
 
 def tarbell_unpublish(command, args):
@@ -573,11 +575,6 @@ def _newproject(command, path, name, settings):
         puts(git.submodule.add(template['url'], '_blueprint'))
         puts(git.submodule.update(*['--init']))
 
-        # Get submodule branches, switch to current major version
-        submodule = sh.git.bake(_cwd=os.path.join(path, '_blueprint'))
-        puts(submodule.fetch())
-        puts(submodule.checkout(MAJOR_VERSION))
-
         # Create spreadsheet
         key = _create_spreadsheet(name, title, path, settings)
 
@@ -625,7 +622,7 @@ def _install_requirements(path):
     """
     Install a blueprint's requirements.txt
     """
-    locations = [os.path.join(path, "_blueprint"), os.path.join(path, "_base"), path] 
+    locations = [os.path.join(path, "_blueprint"), os.path.join(path, "_base"), path]
     success = True
 
     for location in locations:
@@ -682,7 +679,7 @@ def _clean_suffix(string, suffix):
         # return from the beginning up to
         # but not including the first letter
         # in the suffix
-        return string[0:-suffix_len]   
+        return string[0:-suffix_len]
     else:
         # leave unharmed
         return string
@@ -850,7 +847,7 @@ def _copy_config_template(name, title, template, path, key, settings):
             spreadsheet_path = os.path.join(path, '_blueprint/', '_spreadsheet.xlsx')
             try:
                 with open(spreadsheet_path, "rb") as f:
-                    puts("Copying _blueprint/_spreadsheet.xlsx to tarbell_config.py's DEFAULT_CONTEXT") 
+                    puts("Copying _blueprint/_spreadsheet.xlsx to tarbell_config.py's DEFAULT_CONTEXT")
                     data = process_xlsx(f.read())
                     if 'values' in data:
                         data = copy_global_values(data)
@@ -950,9 +947,9 @@ def_cmd(
 def_cmd(
     name='generate',
     fn=tarbell_generate,
-    usage='generate <output dir (optional)>',
+    usage='generate <output dir>',
     help=('Generate static files for the current project. If no output '
-          'directory is specified, create a temporary directory'))
+          'directory specified, Tarbell will raise an error asking for one.'))
 
 
 def_cmd(
@@ -1048,4 +1045,3 @@ def_cmd(
     fn=tarbell_spreadsheet,
     usage='spreadsheet',
     help='Open context spreadsheet in your browser or default application')
-
