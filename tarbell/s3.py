@@ -70,7 +70,18 @@ class S3Sync:
         mimetype = mimetypes.guess_type(absolute_path)
         options = {'Content-Type': mimetype[0]}
 
-        if mimetype[0] is not None and mimetype[0].startswith('text/'):
+        gzippable = [
+            'text/plain',
+            'text/html',
+            'text/css',
+            'application/xml',
+            'application/xhtml+xml',
+            'application/rss+xml',
+            'application/javascript',
+            'application/json'
+        ]
+
+        if mimetype[0] is not None and mimetype[0] in gzippable:
             upload = open(absolute_path)
             options['Content-Encoding'] = 'gzip'
             key_parts = keyname.split('/')
